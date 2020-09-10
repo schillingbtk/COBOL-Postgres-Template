@@ -1,0 +1,105 @@
+     1  IDENTIFICATION DIVISION.
+     2  PROGRAM-ID. COBPG.
+     3 
+     4  ENVIRONMENT DIVISION.
+     5  DATA DIVISION.
+     6  WORKING-STORAGE SECTION.
+     7 
+     8  77 WERT1 PIC X(12).
+     9  77 WERT2 PIC X(25).
+    10  77 WERT3 PIC X(20).
+    11  77 neuezeile pic x value x'00'.
+    12  01 pgconn USAGE POINTER.
+    13  01 pgres  USAGE POINTER.
+    14  01 resptr USAGE POINTER.
+    15  01 resstr PICTURE x(80) based.
+    16  01 tupl PIC 9(6).
+    17  01 nfield PIC 9(6).
+    18  01 sqlstr PIC x(250).
+    19  01 zeile PIC 9(6) VALUE 0.
+    20  01 spalte PIC 9(6) VALUE 0.
+    21  PROCEDURE DIVISION.
+    22  CALL "PQconnectdb" USING
+    23  BY REFERENCE "user = xxx" & x"00" 
+    24  BY REFERENCE "password = yyy" & x"00" 
+    25  BY REFERENCE "dbname = zzz" & x"00" 
+    26  RETURNING pgconn
+    27  ON EXCEPTION
+    28      DISPLAY
+    29      "Fehler. lpq fehlt?" 
+    30      UPON syserr
+    31      END-DISPLAY
+    32      STOP RUN RETURNING 1
+    33  END-CALL.
+    34  IF pgconn EQUAL NULL THEN
+    35      DISPLAY
+    36      "Fehler. DB nicht erreichbar" 
+    37      UPON syserr
+    38      END-DISPLAY
+    39      STOP RUN RETURNING 1
+    40  END-IF.
+    41  STRING
+    42      "SELECT a,b,c " DELIMITED BY SIZE
+    43      "FROM tabelle;" DELIMITED BY SIZE
+    44      x"00" 
+    45  INTO SQLSTR
+    46  END-STRING.
+    47  CALL "PQexec" USING
+    48      BY VALUE pgconn
+    49      BY REFERENCE SQLSTR
+    50      RETURNING pgres
+    51  END-CALL.
+    52  CALL "PQntuples" USING
+    53      BY VALUE pgres
+    54      RETURNING tupl
+    55  END-CALL
+    56  CALL "PQnfields" USING
+    57      BY VALUE pgres
+    58      RETURNING nfield
+    59  END-CALL
+    60  DISPLAY "Wir haben ",tupl," Zeilen" 
+    61  DISPLAY neuezeile
+    62  DISPLAY "Zeilen haben ",nfield," Spalten" 
+    63  DISPLAY neuezeile
+    64  PERFORM VARYING zeile FROM 0 BY 1
+    65  UNTIL zeile = tupl
+    66      PERFORM VARYING spalte FROM 0 BY 1
+    67      UNTIL spalte = nfield
+    68      CALL "PQgetvalue" USING
+    69         BY VALUE pgres
+    70         BY VALUE zeile
+    71         BY VALUE spalte
+    72         RETURNING resptr
+    73      END-CALL
+    74      IF resptr NOT EQUAL NULL THEN
+    75      SET ADDRESS OF resstr TO resptr
+    76      IF spalte = 0   THEN
+    77         STRING resstr DELIMITED BY x"00" INTO WERT1 END-STRING
+    78         DISPLAY
+    79         "Zeile ",zeile
+    80         " Spalte ",spalte," Wert= ", WERT1
+    81         neuezeile
+    82         END-DISPLAY
+    83         ELSE IF spalte = 1 THEN
+    84         STRING resstr DELIMITED BY x"00" INTO WERT2 END-STRING
+    85         DISPLAY
+    86         "Zeile ",zeile
+    87         " Spalte ", spalte," Wert= ",WERT2
+    88         neuezeile
+    89         END-DISPLAY
+    90         ELSE IF spalte = 2 THEN
+    91         STRING resstr DELIMITED BY x"00" INTO WERT3 END-STRING
+    92         DISPLAY
+    93         "Zeile ",zeile
+    94         " Spalte ", spalte," Wert= ",WERT3
+    95         neuezeile
+    96         END-DISPLAY
+    97      END-IF
+    98      END-IF
+    99      END-PERFORM
+   100      MOVE 0 to spalte
+   101  END-PERFORM.
+   102  CALL "PQclear"  USING BY VALUE pgres  END-CALL.
+   103  CALL "PQfinish" USING BY VALUE pgconn END-CALL.
+   104  SET pgconn to NULL.
+   105  STOP RUN.

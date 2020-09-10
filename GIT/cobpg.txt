@@ -1,0 +1,171 @@
+GnuCOBOL 3.0-rc1.0           cobpg.cbl                                                          Thu Sep 10 13:09:35 2020
+
+LINE    PG/LN  A...B............................................................SEQUENCE
+
+000001         IDENTIFICATION DIVISION.
+000002         PROGRAM-ID. COBPG.
+000003         AUTHOR. THOMAS SCHILLING.
+000004         ENVIRONMENT DIVISION.
+000005         DATA DIVISION.
+000006         WORKING-STORAGE SECTION.
+000007        * cobc -Xref -P -Tcobpg.txt --tsymbols -lpq -x cobpg.cbl
+000008         77 WERT1 PIC X(12).
+000009         77 WERT2 PIC X(25).
+000010         77 WERT3 PIC X(20).
+000011         77 neuezeile pic x value x'00'.
+000012         01 pgconn USAGE POINTER.
+000013         01 pgres  USAGE POINTER.
+000014         01 resptr USAGE POINTER.
+000015         01 resstr PICTURE x(80) based.
+000016         01 tupl PIC 9(6).
+000017         01 nfield PIC 9(6).
+000018         01 sqlstr PIC x(250).
+000019         01 zeile PIC 9(6) VALUE 0.
+000020         01 spalte PIC 9(6) VALUE 0.
+000021         PROCEDURE DIVISION.
+000022         CALL "PQconnectdb" USING
+000023         BY REFERENCE "user = xxx" & x"00"
+000024         BY REFERENCE "password = yyy" & x"00"
+000025         BY REFERENCE "dbname = zzz" & x"00"
+000026         RETURNING pgconn
+000027         ON EXCEPTION
+000028             DISPLAY
+000029             "Fehler. lpq fehlt?"
+000030             UPON syserr
+000031             END-DISPLAY
+000032             STOP RUN RETURNING 1
+000033         END-CALL.
+000034         IF pgconn EQUAL NULL THEN
+000035             DISPLAY
+000036             "Fehler. DB nicht erreichbar"
+000037             UPON syserr
+000038             END-DISPLAY
+000039             STOP RUN RETURNING 1
+000040         END-IF.
+000041         STRING
+000042             "SELECT a,b,c " DELIMITED BY SIZE
+000043             "FROM tabelle;" DELIMITED BY SIZE
+000044             x"00"
+000045         INTO SQLSTR
+000046         END-STRING.
+000047         CALL "PQexec" USING
+000048             BY VALUE pgconn
+000049             BY REFERENCE SQLSTR
+000050             RETURNING pgres
+000051         END-CALL.
+000052         CALL "PQntuples" USING
+000053             BY VALUE pgres
+000054             RETURNING tupl
+000055         END-CALL
+000056         CALL "PQnfields" USING
+000057             BY VALUE pgres
+000058             RETURNING nfield
+000059         END-CALL
+000060         DISPLAY "Wir haben ",tupl," Zeilen"
+000061         DISPLAY neuezeile
+000062         DISPLAY "Zeilen haben ",nfield," Spalten"
+000063         DISPLAY neuezeile
+000064         PERFORM VARYING zeile FROM 0 BY 1
+000065         UNTIL zeile = tupl
+000066             PERFORM VARYING spalte FROM 0 BY 1
+000067             UNTIL spalte = nfield
+000068             CALL "PQgetvalue" USING
+000069                BY VALUE pgres
+000070                BY VALUE zeile
+000071                BY VALUE spalte
+000072                RETURNING resptr
+000073             END-CALL
+000074             IF resptr NOT EQUAL NULL THEN
+000075             SET ADDRESS OF resstr TO resptr
+000076             IF spalte = 0   THEN
+000077                STRING resstr DELIMITED BY x"00" INTO WERT1 END-STRING
+000078                DISPLAY
+000079                "Zeile ",zeile
+000080                " Spalte ",spalte," Wert= ", WERT1
+000081                neuezeile
+000082                END-DISPLAY
+000083                ELSE IF spalte = 1 THEN
+000084                STRING resstr DELIMITED BY x"00" INTO WERT2 END-STRING
+000085                DISPLAY
+000086                "Zeile ",zeile
+000087                " Spalte ", spalte," Wert= ",WERT2
+000088                neuezeile
+000089                END-DISPLAY
+000090                ELSE IF spalte = 2 THEN
+000091                STRING resstr DELIMITED BY x"00" INTO WERT3 END-STRING
+000092                DISPLAY
+000093                "Zeile ",zeile
+000094                " Spalte ", spalte," Wert= ",WERT3
+000095                neuezeile
+000096                END-DISPLAY
+000097             END-IF
+000098             END-IF
+000099             END-PERFORM
+000100             MOVE 0 to spalte
+000101         END-PERFORM.
+000102         CALL "PQclear"  USING BY VALUE pgres  END-CALL.
+000103         CALL "PQfinish" USING BY VALUE pgconn END-CALL.
+000104         SET pgconn to NULL.
+000105         STOP RUN.
+
+SIZE  TYPE           LVL  NAME                           PICTURE
+
+      WORKING-STORAGE SECTION
+
+00012 ALPHANUMERIC   77   WERT1                          X(12)
+00025 ALPHANUMERIC   77   WERT2                          X(25)
+00020 ALPHANUMERIC   77   WERT3                          X(20)
+00001 ALPHANUMERIC   77   neuezeile                      X
+
+00008 POINTER        01   pgconn
+
+00008 POINTER        01   pgres
+
+00008 POINTER        01   resptr
+
+00080 ALPHANUMERIC   01   resstr                         X(80)
+
+00006 NUMERIC        01   tupl                           9(6)
+
+00006 NUMERIC        01   nfield                         9(6)
+
+00250 ALPHANUMERIC   01   sqlstr                         X(250)
+
+00006 NUMERIC        01   zeile                          9(6)
+
+00006 NUMERIC        01   spalte                         9(6)
+
+
+NAME                           DEFINED                                    REFERENCES
+
+WERT1                          8        77      80
+WERT2                          9        84      87
+WERT3                          10       91      94
+neuezeile                      11       61      63      81      88      95
+pgconn                         12       26      34      48      103    *104
+pgres                          13       50      53      57      69      102
+resptr                         14       72      74      75
+resstr                         15      *75      77      84      91
+tupl                           16       54      60      65
+nfield                         17       58      62      67
+sqlstr                         18       45      49
+zeile                          19       64      65      70      79      86      93
+spalte                         20       66      67      71      76      80      83      87      90      94     *100
+
+
+LABEL                          DEFINED                                    REFERENCES
+
+E COBPG                        21
+
+FUNCTION                       TYPE                                       REFERENCES
+
+L PQconnectdb                  EXTERN   22
+L PQexec                       EXTERN   47
+L PQntuples                    EXTERN   52
+L PQnfields                    EXTERN   56
+L PQgetvalue                   EXTERN   68
+L PQclear                      EXTERN   102
+L PQfinish                     EXTERN   103
+
+0 warnings in compilation group
+0 errors in compilation group
