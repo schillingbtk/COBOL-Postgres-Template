@@ -4,7 +4,8 @@
        ENVIRONMENT DIVISION.
        DATA DIVISION.
        WORKING-STORAGE SECTION.
-      * cobc -Xref -P -Tcobpg.txt --tsymbols -lpq -x cobpg.cbl 
+      * cobc -Xref -P -Tcobpg.txt --tlines=0
+      * --tsymbols -lpq -x cobpg.cbl 
        77 WERT1 PIC X(12).
        77 WERT2 PIC X(25).
        77 WERT3 PIC X(20).
